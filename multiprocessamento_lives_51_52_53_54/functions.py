@@ -1,13 +1,23 @@
 from shutil import copyfileobj
 from requests import get
-from urllib.parse import urljoin
+from os import makedirs
+from os.path import exists
+from shutil import rmtree
+from contextlib import contextmanager
+from datetime import datetime
 
 base_url = "https://pokeapi.co/api/v2/"
 path = '/tmp/downloads/'
+# Inicio do programa (Cria diretorio e inicia o timer)
+if not exists(path):
+    makedirs(path)
+else:
+    rmtree(path)
+    makedirs(path)
 
 def get_sprite_url(url, sprite='front_default'):
     """Faz o download da url do sprite"""
-    return url['name'],get(url).json()['sprites'][sprite]
+    return url['name'], get(url['url']).json()['sprites'][sprite]
 
 def get_bin_file(args):
     """
@@ -16,14 +26,15 @@ def get_bin_file(args):
     filename, url = args
     return filename,get(url, stream=True).raw
 
-def save_file(*args, path=path, type='png'):
+def save_file(args, path=path, type_='png'):
     """
     Salva binario da imagem do pokeapi como arquivo
     """
     filename, binary = args
-    with open(path + filename + '.' + type, 'wb') as out_file:
+    fname = f'{path}/{filename}.{type_}'
+    with open(fname, 'wb') as out_file:
         copyfileobj(binary, out_file)
-    return filename + '.' + type
+    return fname
 
 def pipeline(*funcs):
     """
@@ -33,6 +44,13 @@ def pipeline(*funcs):
         state = arg
         for func in funcs:
             state = func(state)
-        return inner
+    return inner
 
 target = pipeline(get_sprite_url, get_bin_file, save_file)
+
+@contextmanager
+def timeit(*args):
+    start_time = datetime.now()
+    yield
+    time_elapsed = datetime.now() - start_time
+    print(f'Tempo total (hh:mm:ss.ms) {time_elapsed}')

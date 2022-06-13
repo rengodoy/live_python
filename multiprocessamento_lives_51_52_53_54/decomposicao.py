@@ -1,15 +1,9 @@
 from queue import Queue
-from shutil import copyfileobj, get_unpack_formats
 from threading import Thread, Event
 from time import sleep
-from tracemalloc import start
 from requests import get
 from urllib.parse import urljoin
-from os import makedirs
-from os.path import exists
-from shutil import rmtree
-from datetime import datetime
-from functions import target
+from functions import target, timeit
 
 base_url = "https://pokeapi.co/api/v2/"
 event = Event()
@@ -18,8 +12,8 @@ path = '/tmp/downloads/'
 
 
 
-def get_urls():
-    pokemons = get(urljoin(base_url, 'pokemon/?limit=5 ')).json()['results']
+def get_urls(size=100,offset=0):
+    pokemons = get(urljoin(base_url, f'pokemon/?limit={size}&offset={offset}')).json()['results']
     [fila.put(pokemon) for pokemon in pokemons]
     event.set()
     fila.put('Kill')
@@ -31,10 +25,10 @@ class Worker(Thread):
         self.queue = queue
         self._target = target
         self._stoped = False
+        print(self.name, 'started')
 
     def run(self):
-        # event.wait()
-        import ipdb; ipdb.set_trace()
+        event.wait()
         while not self.queue.empty():
             pokemon = self.queue.get()
             print(self.name, pokemon)
@@ -48,18 +42,23 @@ class Worker(Thread):
         while not self._stoped:
             sleep(0.1)
 
-# Inicio do programa (Cria diretorio e inicia o timer)
-if not exists(path):
-    makedirs(path)
-else:
-    rmtree(path)
-    makedirs(path)
 
-start_time = datetime.now()
-get_urls()
-print(fila.queue)
-print('start')
-th = Worker(target=target, queue=fila, name='Worker1')
-th.start()
-th.join()
-end_time = datetime.now() - start_time
+def get_pool(n_th:int):
+    """ Cria n threads """
+    return [Worker(target=target, queue=fila, name=f'Worker {i}') for i in range(n_th)]
+
+
+with timeit():
+    print(fila.queue)
+    thrs = get_pool(10)
+    print('start')
+    get_urls(size=50, offset=0)
+    [th.start() for th in thrs]
+    get_urls(size=50,offset=50)
+    get_urls(size=50,offset=100)
+    get_urls(size=50,offset=150)
+    get_urls(size=50,offset=200)
+    get_urls(size=50,offset=250)
+    get_urls(size=50,offset=300)
+    print('joins')
+    [th.join() for th in thrs]
