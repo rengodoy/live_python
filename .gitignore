@@ -1,0 +1,9 @@
+.vscode
+.pyc
+venv
+.venv
+__pycache__
+*.so
+f*.c
+build
+
