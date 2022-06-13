@@ -16,9 +16,8 @@ from urllib.parse import urljoin
 from requests import get
 from os import makedirs
 from os.path import exists
-from threading import Thread
 from shutil import rmtree
-from queue import Queue
+
 
 # Define variáveis
 base_url = "https://pokeapi.co/api/v2/"
